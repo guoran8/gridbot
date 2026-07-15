@@ -71,16 +71,45 @@ export function VenueCard({ venue }: { venue: VenueStatus }) {
               </Button>
             </div>
             {result && (
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <Metric
-                  label={t("venues.balance")}
-                  value={result.balanceUsd !== null ? `$${fmtUsd(result.balanceUsd)}` : "—"}
-                />
-                <Metric
-                  label={t("venues.mark")}
-                  value={result.markPrice !== null ? fmtUsd(result.markPrice) : "—"}
-                />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <Metric
+                    label={t("venues.balance")}
+                    value={result.balanceUsd !== null ? `$${fmtUsd(result.balanceUsd)}` : "—"}
+                  />
+                  <Metric
+                    label={t("venues.mark")}
+                    value={result.markPrice !== null ? fmtUsd(result.markPrice) : "—"}
+                  />
+                </div>
+                {result.symbol && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">{t("venues.openOrders")}</span>
+                    {result.openOrders.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        {t("venues.noOpenOrders")}
+                      </span>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        {result.openOrders.map((o) => (
+                          <div
+                            key={o.exchangeOrderId}
+                            className="flex justify-between text-xs tabular-nums"
+                          >
+                            <span
+                              className={o.side === "buy" ? "text-emerald-500" : "text-red-500"}
+                            >
+                              {t(`side.${o.side}`)}
+                            </span>
+                            <span>{fmtUsd(o.price)}</span>
+                            <span className="text-muted-foreground">{o.size}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </>
         ) : (

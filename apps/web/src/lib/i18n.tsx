@@ -26,6 +26,8 @@ const dict = {
     "venues.symbolPlaceholder": "交易对，如 BTC-USD",
     "venues.probeFailed": "查询失败",
     "venues.notConfiguredHint": "在 .env 里配置该交易所的私钥/地址后可用",
+    "venues.openOrders": "当前挂单",
+    "venues.noOpenOrders": "无挂单",
 
     "overview.empty": "还没有机器人，去新建一个吧。",
     "overview.totalPnl": "总净盈亏",
@@ -121,6 +123,8 @@ const dict = {
     "venues.symbolPlaceholder": "Symbol, e.g. BTC-USD",
     "venues.probeFailed": "Probe failed",
     "venues.notConfiguredHint": "Configure this venue's keys/address in .env to enable",
+    "venues.openOrders": "Open orders",
+    "venues.noOpenOrders": "No open orders",
 
     "overview.empty": "No bots yet — create one.",
     "overview.totalPnl": "Total net PnL",

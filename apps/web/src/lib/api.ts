@@ -23,11 +23,19 @@ export interface VenueStatus {
   liveTradingEnabled: boolean;
 }
 
+export interface VenueOpenOrder {
+  exchangeOrderId: string;
+  side: "buy" | "sell";
+  price: number;
+  size: number;
+}
+
 export interface VenueProbe {
   id: string;
   symbol: string | null;
   balanceUsd: number | null;
   markPrice: number | null;
+  openOrders: VenueOpenOrder[];
 }
 
 /** API base — same-origin in dev (Vite proxy), overridable for prod builds. */

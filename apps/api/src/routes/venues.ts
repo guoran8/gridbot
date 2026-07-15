@@ -49,7 +49,8 @@ export function venuesRoutes(c: AppContainer): Hono {
       await adapter.connect();
       const balanceUsd = await adapter.getBalanceUsd().catch(() => null);
       const markPrice = symbol ? await adapter.getMarkPrice(symbol).catch(() => null) : null;
-      return ctx.json({ id, symbol: symbol ?? null, balanceUsd, markPrice });
+      const openOrders = symbol ? await adapter.getOpenOrders(symbol).catch(() => []) : [];
+      return ctx.json({ id, symbol: symbol ?? null, balanceUsd, markPrice, openOrders });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       c.logger.warn({ err, venue: id }, "venue probe failed");
