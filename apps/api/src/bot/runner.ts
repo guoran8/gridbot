@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { GridEngine } from "@gridbot/core";
+import { GridEngine, worstCaseMarginUsd } from "@gridbot/core";
 import type { ExchangeAdapter, VenueFill } from "@gridbot/exchanges";
 import type { NotifierRegistry } from "@gridbot/services";
 import type {
@@ -97,6 +97,23 @@ export class BotRunner {
     });
     await this.adapter.connect();
     this.latestMark = await this.adapter.getMarkPrice(this.config.symbol);
+
+    // Margin pre-check: refuse to start if a fully one-directional fill would
+    // exceed available balance (worst case as price trends through the band).
+    const balance = await this.adapter.getBalanceUsd().catch(() => Infinity);
+    const requiredMargin = worstCaseMarginUsd(this.config);
+    if (requiredMargin > balance) {
+      const msg =
+        `insufficient margin: worst-case ${requiredMargin.toFixed(2)} USD needed ` +
+        `(gridCount×perGrid÷leverage) but only ${balance.toFixed(2)} available. ` +
+        `Lower gridCount/perGridSizeUsd, raise leverage, or fund the account.`;
+      this.log("error", msg);
+      this.notify("error", "Margin pre-check failed", `${this.config.symbol}: ${msg}`);
+      await this.adapter.disconnect();
+      this.unsubFills?.();
+      this.unsubMark?.();
+      throw new Error(msg);
+    }
 
     this.startedAt ??= Date.now();
     this.setStatus("running");
@@ -196,7 +213,7 @@ export class BotRunner {
       // Place newly-desired orders.
       for (const d of desired) {
         if (this.openByIndex.has(d.gridIndex)) continue;
-        await this.placeOrder(d.gridIndex, d.side, d.price, d.size);
+        await this.placeOrder(d.gridIndex, d.side, d.price, d.size, d.reduceOnly);
       }
     } catch (err) {
       this.fail(err);
@@ -236,6 +253,7 @@ export class BotRunner {
     side: "buy" | "sell",
     price: number,
     size: number,
+    reduceOnly: boolean,
   ): Promise<void> {
     const clientOrderId = `${this.id}:${gridIndex}:${++this.seq}`;
     const venueOrder = await this.adapter.placeOrder({
@@ -244,6 +262,8 @@ export class BotRunner {
       price,
       size,
       clientOrderId,
+      // long/short counter-orders only close the position, never reverse it.
+      reduceOnly,
     });
     const localId = randomUUID();
     const tracked: TrackedOrder = {

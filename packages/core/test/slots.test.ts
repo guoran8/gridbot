@@ -46,7 +46,7 @@ describe("nextSlotsOnFill", () => {
 describe("desiredOrders", () => {
   it("emits one order per non-empty rung with correct qty", () => {
     const slots = initialSlots(prices, 105, "neutral");
-    const orders = desiredOrders(slots, prices, 100, 105);
+    const orders = desiredOrders(slots, prices, 100, 105, "neutral");
     const buy100 = orders.find((o) => o.gridIndex === 0);
     expect(buy100?.side).toBe("buy");
     expect(buy100?.size).toBeCloseTo(1); // 100 / 100
@@ -56,7 +56,7 @@ describe("desiredOrders", () => {
     // A stale slot map that wants to buy at 108 while mark has fallen to 103.
     const slots = initialSlots(prices, 105, "neutral");
     slots[8] = "buy"; // 108 buy, but mark below it
-    const orders = desiredOrders(slots, prices, 100, 103);
+    const orders = desiredOrders(slots, prices, 100, 103, "neutral");
     expect(orders.find((o) => o.gridIndex === 8)).toBeUndefined();
   });
 });

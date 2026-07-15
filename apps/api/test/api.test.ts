@@ -50,6 +50,17 @@ describe("gridbot API", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects a grid whose spacing can't cover fees", async () => {
+    const res = await app.request("/v1/bots", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      // tight band, many levels → spacing below the round-trip fee
+      body: JSON.stringify({ ...paperConfig, lowerPrice: 100, upperPrice: 100.2, gridCount: 200 }),
+    });
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("uneconomic_grid");
+  });
+
   it("creates, lists, and controls a paper bot end to end", async () => {
     const createRes = await app.request("/v1/bots", {
       method: "POST",

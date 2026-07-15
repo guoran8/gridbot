@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type EngineState, GridEngine } from "@gridbot/core";
+import { type EngineState, GridEngine, validateGridEconomics } from "@gridbot/core";
 import { createAdapter, type ExchangeAdapter } from "@gridbot/exchanges";
 import type { NotifierRegistry } from "@gridbot/services";
 import {
@@ -14,6 +14,14 @@ import type { EventBus } from "../events/bus.js";
 import type { Logger } from "../logger.js";
 import { buildLiveAdapter } from "../venues/build-adapter.js";
 import { BotRunner, type RunnerDeps } from "./runner.js";
+
+/** Thrown when a grid config is rejected on economic grounds (fee vs spacing). */
+export class GridEconomicsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GridEconomicsError";
+  }
+}
 
 /** Deterministic 32-bit seed from a bot id, so paper sims are reproducible per bot. */
 function seedFromId(id: string): number {
@@ -67,6 +75,11 @@ export class BotManager {
 
   createBot(input: GridConfig): BotSnapshot {
     const config = GridConfigSchema.parse(input);
+
+    // Reject grids whose spacing can't cover round-trip fees (guaranteed loss).
+    const econ = validateGridEconomics(config, this.config.assumedFeeRate);
+    if (!econ.ok) throw new GridEconomicsError(econ.reason ?? "grid is uneconomic");
+
     const id = randomUUID();
     const engine = new GridEngine(config);
     const now = Date.now();

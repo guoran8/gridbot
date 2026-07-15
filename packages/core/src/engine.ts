@@ -62,7 +62,13 @@ export class GridEngine {
 
   /** Orders that should currently rest, given the mark. */
   desiredOrders(markPrice: number): DesiredOrder[] {
-    return desiredOrders(this.slots, this.prices, this.config.perGridSizeUsd, markPrice);
+    return desiredOrders(
+      this.slots,
+      this.prices,
+      this.config.perGridSizeUsd,
+      markPrice,
+      this.config.mode,
+    );
   }
 
   /** Fold a fill into accounting and re-arm the counter rung. */

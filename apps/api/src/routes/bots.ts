@@ -2,6 +2,7 @@ import { CreateBotRequestSchema } from "@gridbot/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppContainer } from "../app.js";
+import { GridEconomicsError } from "../bot/manager.js";
 
 const BotActionParam = z.enum(["start", "pause", "resume", "stop", "flatten"]);
 
@@ -26,8 +27,15 @@ export function botsRoutes(c: AppContainer): Hono {
         400,
       );
     }
-    const snapshot = c.manager.createBot(parsed.data);
-    return ctx.json(snapshot, 201);
+    try {
+      const snapshot = c.manager.createBot(parsed.data);
+      return ctx.json(snapshot, 201);
+    } catch (err) {
+      if (err instanceof GridEconomicsError) {
+        return ctx.json({ error: { code: "uneconomic_grid", message: err.message } }, 400);
+      }
+      throw err;
+    }
   });
 
   app.get("/:id", (ctx) => {

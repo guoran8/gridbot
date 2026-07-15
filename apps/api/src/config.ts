@@ -7,6 +7,8 @@ const EnvSchema = z.object({
   GRIDBOT_DB_PATH: z.string().default("./data/gridbot.sqlite"),
   /** Bot reconcile cadence in ms (0 disables the timer — manual/test mode). */
   GRIDBOT_RECONCILE_MS: z.coerce.number().int().nonnegative().default(1500),
+  /** Per-side fee rate assumed when validating grid economics (maker ~0.0002). */
+  GRIDBOT_ASSUMED_FEE_RATE: z.coerce.number().finite().nonnegative().default(0.0002),
   GRIDBOT_CORS_ORIGIN: z.string().default("http://localhost:3000"),
   GRIDBOT_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 
@@ -55,6 +57,7 @@ const EnvSchema = z.object({
 export interface AppConfig {
   port: number;
   dbPath: string;
+  assumedFeeRate: number;
   reconcileMs: number;
   corsOrigin: string;
   logLevel: "debug" | "info" | "warn" | "error";
@@ -104,6 +107,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port: parsed.GRIDBOT_PORT,
     dbPath: parsed.GRIDBOT_DB_PATH,
     reconcileMs: parsed.GRIDBOT_RECONCILE_MS,
+    assumedFeeRate: parsed.GRIDBOT_ASSUMED_FEE_RATE,
     corsOrigin: parsed.GRIDBOT_CORS_ORIGIN,
     logLevel: parsed.GRIDBOT_LOG_LEVEL,
     credentials: {

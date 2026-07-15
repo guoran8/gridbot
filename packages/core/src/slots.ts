@@ -43,12 +43,25 @@ export function nextSlotsOnFill(
   return next;
 }
 
+/**
+ * Whether an order on `side` only *closes* a position under `mode` (never opens
+ * the opposite direction). In a long grid, sells only take profit on the long;
+ * in a short grid, buys only cover the short. Neutral opens both ways.
+ */
+export function isReduceOnly(side: OrderSide, mode: GridMode): boolean {
+  if (mode === "long") return side === "sell";
+  if (mode === "short") return side === "buy";
+  return false;
+}
+
 /** A desired resting order derived from the slot map. */
 export interface DesiredOrder {
   gridIndex: number;
   side: OrderSide;
   price: number;
   size: number;
+  /** True when this order may only reduce the position (long/short modes). */
+  reduceOnly: boolean;
 }
 
 /**
@@ -61,6 +74,7 @@ export function desiredOrders(
   prices: number[],
   perGridSizeUsd: number,
   mark: number,
+  mode: GridMode,
 ): DesiredOrder[] {
   const orders: DesiredOrder[] = [];
   for (let i = 0; i < slots.length; i++) {
@@ -69,7 +83,13 @@ export function desiredOrders(
     const price = prices[i]!;
     if (side === "buy" && price >= mark) continue; // would cross
     if (side === "sell" && price <= mark) continue; // would cross
-    orders.push({ gridIndex: i, side, price, size: perGridSizeUsd / price });
+    orders.push({
+      gridIndex: i,
+      side,
+      price,
+      size: perGridSizeUsd / price,
+      reduceOnly: isReduceOnly(side, mode),
+    });
   }
   return orders;
 }
