@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    env_file:
+      - .env
+    environment:
+      GRIDBOT_PORT: "8787"
+      GRIDBOT_DB_PATH: /data/gridbot.sqlite
+      GRIDBOT_CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "8787:8787"
+    volumes:
+      - gridbot-data:/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      target: build
+    command: ["pnpm", "--filter", "@gridbot/web", "preview", "--host", "--port", "3000"]
+    environment:
+      # In the browser, calls go to the API's published port on the host.
+      VITE_API_BASE_URL: http://localhost:8787
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  gridbot-data:

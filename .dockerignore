@@ -1,0 +1,21 @@
+# Never ship host artifacts into the build context — they clobber the
+# container's own install (native binaries differ across OS/arch).
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
+# local runtime + secrets
+data/
+*.sqlite
+*.sqlite-*
+.env
+.env.*
+!.env.example
+
+.git
+.github
+coverage/
+**/routeTree.gen.ts
+*.log
+.DS_Store

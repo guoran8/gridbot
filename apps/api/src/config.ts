@@ -52,7 +52,13 @@ export interface AppConfig {
 
 /** Parse + validate process env into a typed config, wrapping secrets. */
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  const parsed = EnvSchema.parse(env);
+  // Treat empty-string vars (common in `.env` templates) as unset, so optional
+  // fields validate as `undefined` instead of failing e.g. `.url()` on "".
+  const cleaned: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (typeof v === "string" && v.trim() !== "") cleaned[k] = v;
+  }
+  const parsed = EnvSchema.parse(cleaned);
   return {
     port: parsed.GRIDBOT_PORT,
     dbPath: parsed.GRIDBOT_DB_PATH,
