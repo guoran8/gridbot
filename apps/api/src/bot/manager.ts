@@ -187,6 +187,23 @@ export class BotManager {
       });
     }
 
+    if (config.exchange === "decibel") {
+      const dec = this.config.decibel;
+      if (!dec) {
+        throw new Error("decibel needs GRIDBOT_DECIBEL_SUBACCOUNT_ADDRESS (plus the Ed25519 key)");
+      }
+      return createAdapter({
+        id: "decibel",
+        credentials: { privateKey: secret.reveal() },
+        decibel: {
+          subaccountAddress: dec.subaccountAddress,
+          nodeApiKey: dec.nodeApiKey,
+          allowLive: dec.allowLive,
+          network: "testnet",
+        },
+      });
+    }
+
     return createAdapter({ id: config.exchange, credentials: { privateKey: secret.reveal() } });
   }
 

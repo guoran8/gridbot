@@ -7,4 +7,5 @@ export * from "./live/stubs.js";
 export * from "./live/extended/client.js";
 export * from "./live/extended/sign.js";
 export * from "./live/extended/adapter.js";
+export * from "./live/decibel/adapter.js";
 export * from "./registry.js";

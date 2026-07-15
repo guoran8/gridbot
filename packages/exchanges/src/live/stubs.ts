@@ -73,11 +73,6 @@ abstract class LiveAdapterStub implements ExchangeAdapter {
   }
 }
 
-/** Decibel (Aptos) — Ed25519 order signing. Filled in Phase 6. */
-export class DecibelAdapter extends LiveAdapterStub {
-  readonly id: ExchangeId = "decibel";
-}
-
 /** RISEx — signer-key order submission. Filled in Phase 6. */
 export class RisexAdapter extends LiveAdapterStub {
   readonly id: ExchangeId = "risex";

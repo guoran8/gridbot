@@ -20,7 +20,14 @@ const EnvSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
+  // Decibel (Aptos): API-wallet Ed25519 key + trading-account (subaccount) addr.
   GRIDBOT_DECIBEL_PRIVATE_KEY: z.string().optional(),
+  GRIDBOT_DECIBEL_SUBACCOUNT_ADDRESS: z.string().optional(),
+  GRIDBOT_DECIBEL_NODE_API_KEY: z.string().optional(),
+  GRIDBOT_DECIBEL_ALLOW_LIVE: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
   GRIDBOT_RISEX_PRIVATE_KEY: z.string().optional(),
 
   // --- AI advisor (optional) ---
@@ -53,6 +60,12 @@ export interface AppConfig {
     apiKey: SecretString;
     vaultId: string;
     allowUnverifiedSigning: boolean;
+  };
+  /** Decibel-specific extras (Ed25519 key lives in credentials.decibel). */
+  decibel?: {
+    subaccountAddress: string;
+    nodeApiKey?: string;
+    allowLive: boolean;
   };
   ai?: {
     provider: "anthropic" | "deepseek" | "gemini";
@@ -98,6 +111,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
             allowUnverifiedSigning: parsed.GRIDBOT_EXTENDED_ALLOW_UNVERIFIED_SIGNING ?? false,
           }
         : undefined,
+    decibel: parsed.GRIDBOT_DECIBEL_SUBACCOUNT_ADDRESS
+      ? {
+          subaccountAddress: parsed.GRIDBOT_DECIBEL_SUBACCOUNT_ADDRESS,
+          nodeApiKey: parsed.GRIDBOT_DECIBEL_NODE_API_KEY,
+          allowLive: parsed.GRIDBOT_DECIBEL_ALLOW_LIVE ?? false,
+        }
+      : undefined,
     ai:
       parsed.GRIDBOT_AI_PROVIDER && parsed.GRIDBOT_AI_API_KEY
         ? {

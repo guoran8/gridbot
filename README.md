@@ -6,17 +6,18 @@
 
 ## 现状
 
-| 部分                                                | 状态                                                               |
-| --------------------------------------------------- | ------------------------------------------------------------------ |
-| 网格引擎（等差/等比、中性/做多/做空、均价成本记账） | ✅ 完成，单测覆盖                                                  |
-| 模拟盘（paper）端到端                               | ✅ 可用：建 bot → 下网格 → 模拟价格震荡 → 成交/盈亏/成交额落库     |
-| Hono API + SQLite 持久化 + 崩溃恢复                 | ✅                                                                 |
-| React 面板（实时 SSE、图表、中英双语）              | ✅                                                                 |
-| AI 顾问（Claude / DeepSeek / Gemini）               | ✅                                                                 |
-| Telegram / Webhook 通知、代理                       | ✅                                                                 |
-| **Extended 实盘**：行情/余额/挂单/撤单              | ✅ 读路径可用（testnet 默认）                                      |
-| **Extended 下单签名**（Stark/SNIP-12）              | ⚠️ **已实现但未验证**——默认拒绝下单，需 testnet 核对签名后显式开启 |
-| Decibel / RISEx 实盘                                | 🚧 stub（后续，需各自 API 文档 + 真实 payload 核对）               |
+| 部分                                                | 状态                                                                        |
+| --------------------------------------------------- | --------------------------------------------------------------------------- |
+| 网格引擎（等差/等比、中性/做多/做空、均价成本记账） | ✅ 完成，单测覆盖                                                           |
+| 模拟盘（paper）端到端                               | ✅ 可用：建 bot → 下网格 → 模拟价格震荡 → 成交/盈亏/成交额落库              |
+| Hono API + SQLite 持久化 + 崩溃恢复                 | ✅                                                                          |
+| React 面板（实时 SSE、图表、中英双语）              | ✅                                                                          |
+| AI 顾问（Claude / DeepSeek / Gemini）               | ✅                                                                          |
+| Telegram / Webhook 通知、代理                       | ✅                                                                          |
+| **Extended 实盘**：行情/余额/挂单/撤单              | ✅ 读路径可用（testnet 默认）                                               |
+| **Extended 下单签名**（Stark/SNIP-12，手写）        | ⚠️ **已实现但未验证**——默认拒绝下单，需 testnet 核对签名后显式开启          |
+| **Decibel 实盘**（Aptos，官方 SDK 签名）            | ✅ 读路径可用；下单走官方 `@decibeltrade/sdk`，默认关，`ALLOW_LIVE=true` 开 |
+| RISEx 实盘                                          | 🚧 stub（研究中）                                                           |
 
 **除非你已在 testnet 核对过 Extended 签名，否则只跑 `tradingMode: "paper"`。** Extended 下单默认抛错，需要 `allowUnverifiedSigning` 才放行——见 `packages/exchanges/src/live/extended/sign.ts` 顶部的验证清单。
 
