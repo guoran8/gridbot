@@ -11,6 +11,7 @@ import { loadConfig } from "./config.js";
 const config = loadConfig();
 const container = createContainer(config);
 await container.manager.init();
+container.scheduler?.start();
 
 const app = createApp(container);
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {

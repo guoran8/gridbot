@@ -26,6 +26,7 @@ function RootLayout() {
               <NavLink to="/">{t("nav.overview")}</NavLink>
               <NavLink to="/create">{t("nav.create")}</NavLink>
               <NavLink to="/venues">{t("nav.venues")}</NavLink>
+              <NavLink to="/ai">{t("nav.ai")}</NavLink>
               <NavLink to="/logs">{t("nav.logs")}</NavLink>
             </nav>
           </div>

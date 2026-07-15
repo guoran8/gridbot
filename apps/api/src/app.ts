@@ -14,6 +14,7 @@ import { DrizzleBotStore } from "./db/store.js";
 import type { BotStore } from "./db/store.js";
 import { EventBus } from "./events/bus.js";
 import { createLogger, type Logger } from "./logger.js";
+import { AiScheduler } from "./ai/scheduler.js";
 import { aiRoutes } from "./routes/ai.js";
 import { botsRoutes } from "./routes/bots.js";
 import { streamRoutes } from "./routes/stream.js";
@@ -28,6 +29,7 @@ export interface AppContainer {
   manager: BotManager;
   notifiers: NotifierRegistry;
   advisor?: AiAdvisor;
+  scheduler?: AiScheduler;
   /** Close underlying resources (sqlite handle). */
   close: () => void;
 }
@@ -68,7 +70,33 @@ export function createContainer(config: AppConfig): AppContainer {
     : undefined;
 
   const manager = new BotManager(config, store, bus, logger, notifiers);
-  return { config, logger, store, bus, manager, notifiers, advisor, close: () => sqlite.close() };
+
+  const scheduler =
+    advisor && config.ai && (config.ai.sentinelMinutes > 0 || config.ai.reportHour >= 0)
+      ? new AiScheduler({
+          advisor,
+          notifiers,
+          logger,
+          snapshots: () => manager.snapshots(),
+          sentinelMinutes: config.ai.sentinelMinutes,
+          reportHour: config.ai.reportHour,
+        })
+      : undefined;
+
+  return {
+    config,
+    logger,
+    store,
+    bus,
+    manager,
+    notifiers,
+    advisor,
+    scheduler,
+    close: () => {
+      scheduler?.stop();
+      sqlite.close();
+    },
+  };
 }
 
 /** Build the Hono app over a container. */

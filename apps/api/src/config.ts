@@ -43,6 +43,10 @@ const EnvSchema = z.object({
   GRIDBOT_AI_PROVIDER: z.enum(["anthropic", "deepseek", "gemini"]).optional(),
   GRIDBOT_AI_API_KEY: z.string().optional(),
   GRIDBOT_AI_MODEL: z.string().optional(),
+  // Scheduled capabilities (0 / -1 = off). Sentinel pushes alerts on anomaly;
+  // the daily report fires once when the local hour first matches.
+  GRIDBOT_AI_SENTINEL_MINUTES: z.coerce.number().int().nonnegative().default(0),
+  GRIDBOT_AI_REPORT_HOUR: z.coerce.number().int().min(-1).max(23).default(-1),
 
   // --- Notifications (optional) ---
   GRIDBOT_TELEGRAM_BOT_TOKEN: z.string().optional(),
@@ -87,6 +91,8 @@ export interface AppConfig {
     provider: "anthropic" | "deepseek" | "gemini";
     apiKey: SecretString;
     model?: string;
+    sentinelMinutes: number;
+    reportHour: number;
   };
   telegram?: { botToken: SecretString; chatId: string };
   webhookUrl?: string;
@@ -148,6 +154,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
             provider: parsed.GRIDBOT_AI_PROVIDER,
             apiKey: new SecretString(parsed.GRIDBOT_AI_API_KEY),
             model: parsed.GRIDBOT_AI_MODEL,
+            sentinelMinutes: parsed.GRIDBOT_AI_SENTINEL_MINUTES,
+            reportHour: parsed.GRIDBOT_AI_REPORT_HOUR,
           }
         : undefined,
     telegram:

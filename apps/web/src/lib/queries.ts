@@ -73,6 +73,18 @@ export function useAiStatus() {
   return useQuery({ queryKey: ["ai-status"], queryFn: api.aiStatus, staleTime: 60_000 });
 }
 
+export function useAiChat() {
+  return useMutation({ mutationFn: (message: string) => api.aiChat(message) });
+}
+
+export function useAiSentinel() {
+  return useMutation({ mutationFn: () => api.aiSentinel() });
+}
+
+export function useAiReport() {
+  return useMutation({ mutationFn: () => api.aiReport() });
+}
+
 export function useAdvise() {
   return useMutation({
     mutationFn: (input: { symbol: string; markPrice: number; closes?: number[] }) =>

@@ -6,4 +6,5 @@ export * from "./notify/webhook.js";
 export * from "./notify/registry.js";
 export * from "./ai/types.js";
 export * from "./ai/advisor.js";
+export * from "./ai/complete.js";
 export * from "./proxy/dispatcher.js";

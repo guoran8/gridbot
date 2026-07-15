@@ -105,8 +105,10 @@ SQLite 数据落在具名卷 `gridbot-data`。
 - `POST /v1/bots` 建 bot（body = 网格配置）· `GET /v1/bots` 列表 · `GET /v1/bots/:id`
 - `POST /v1/bots/:id/{start|pause|resume|stop|flatten}` 控制
 - `GET /v1/bots/:id/{orders,fills}` 本地账本
-- `GET /v1/stream` SSE 实时状态
-- `POST /v1/ai/advise` LLM 网格参数建议 · `GET /health` · `GET /logs`
+- `POST /v1/bots/:id/adjust` 实时调区间 · `POST /v1/bots/:id/recover` 区间外恢复
+- `GET /v1/stream` SSE 实时状态 · `GET /v1/venues` 实盘只读状态
+- AI：`/v1/ai/advise`（网格参数）· `/v1/ai/chat`（对话）· `/v1/ai/sentinel`（风险哨兵）· `/v1/ai/report`（日报）· `/v1/ai/market`（行情分析）
+- `GET /health` · `GET /logs`
 
 ## 安全须知
 

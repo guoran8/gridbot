@@ -72,6 +72,11 @@ export const api = {
   aiStatus: () => req<{ enabled: boolean; provider: string | null }>("/v1/ai/status"),
   advise: (input: { symbol: string; markPrice: number; closes?: number[] }) =>
     req<GridAdvice>("/v1/ai/advise", { method: "POST", body: JSON.stringify(input) }),
+  aiChat: (message: string) =>
+    req<{ reply: string }>("/v1/ai/chat", { method: "POST", body: JSON.stringify({ message }) }),
+  aiSentinel: () =>
+    req<{ ok: boolean; alerts: string[]; summary: string }>("/v1/ai/sentinel", { method: "POST" }),
+  aiReport: () => req<{ report: string }>("/v1/ai/report", { method: "POST" }),
   listVenues: () => req<{ venues: VenueStatus[] }>("/v1/venues").then((r) => r.venues),
   probeVenue: (id: string, symbol?: string) =>
     req<VenueProbe>(
