@@ -1,0 +1,30 @@
+{
+  "name": "gridbot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "api:dev": "pnpm --filter @gridbot/api dev",
+    "web:dev": "pnpm --filter @gridbot/web dev",
+    "db:generate": "pnpm --filter @gridbot/api db:generate",
+    "db:migrate": "pnpm --filter @gridbot/api db:migrate"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
+    "turbo": "^2.10.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.4.0"
+}

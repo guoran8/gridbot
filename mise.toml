@@ -1,0 +1,5 @@
+[tools]
+node = "24.14.1"
+# Use the npm backend (not aqua) — aqua's macos-arm64 asset naming is broken for
+# recent pnpm releases. Keep in sync with package.json#packageManager.
+"npm:pnpm" = "11.4.0"
