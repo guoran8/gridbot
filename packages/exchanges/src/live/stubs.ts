@@ -73,11 +73,6 @@ abstract class LiveAdapterStub implements ExchangeAdapter {
   }
 }
 
-/** Extended (Starknet) — Stark-curve order signing. Filled in Phase 6. */
-export class ExtendedAdapter extends LiveAdapterStub {
-  readonly id: ExchangeId = "extended";
-}
-
 /** Decibel (Aptos) — Ed25519 order signing. Filled in Phase 6. */
 export class DecibelAdapter extends LiveAdapterStub {
   readonly id: ExchangeId = "decibel";

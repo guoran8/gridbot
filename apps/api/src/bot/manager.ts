@@ -168,6 +168,25 @@ export class BotManager {
         `no credentials configured for ${config.exchange} — set GRIDBOT_${config.exchange.toUpperCase()}_PRIVATE_KEY`,
       );
     }
+
+    if (config.exchange === "extended") {
+      const ext = this.config.extended;
+      if (!ext) {
+        throw new Error(
+          "extended needs GRIDBOT_EXTENDED_API_KEY + GRIDBOT_EXTENDED_VAULT_ID (plus the Stark private key)",
+        );
+      }
+      return createAdapter({
+        id: "extended",
+        credentials: { privateKey: secret.reveal(), apiKey: ext.apiKey.reveal() },
+        extended: {
+          vaultId: ext.vaultId,
+          allowUnverifiedSigning: ext.allowUnverifiedSigning,
+          network: "testnet",
+        },
+      });
+    }
+
     return createAdapter({ id: config.exchange, credentials: { privateKey: secret.reveal() } });
   }
 

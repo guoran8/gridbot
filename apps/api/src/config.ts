@@ -10,8 +10,16 @@ const EnvSchema = z.object({
   GRIDBOT_CORS_ORIGIN: z.string().default("http://localhost:3000"),
   GRIDBOT_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 
-  // --- Live exchange credentials (optional; consumed in Phase 6) ---
+  // --- Live exchange credentials (optional) ---
+  // Extended (Starknet): Stark key + API key + vault id all required for live.
   GRIDBOT_EXTENDED_PRIVATE_KEY: z.string().optional(),
+  GRIDBOT_EXTENDED_API_KEY: z.string().optional(),
+  GRIDBOT_EXTENDED_VAULT_ID: z.string().optional(),
+  // Extended order signing is unverified — must be explicitly opted in.
+  GRIDBOT_EXTENDED_ALLOW_UNVERIFIED_SIGNING: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
   GRIDBOT_DECIBEL_PRIVATE_KEY: z.string().optional(),
   GRIDBOT_RISEX_PRIVATE_KEY: z.string().optional(),
 
@@ -39,6 +47,12 @@ export interface AppConfig {
     extended?: SecretString;
     decibel?: SecretString;
     risex?: SecretString;
+  };
+  /** Extended-specific extras (Stark key lives in credentials.extended). */
+  extended?: {
+    apiKey: SecretString;
+    vaultId: string;
+    allowUnverifiedSigning: boolean;
   };
   ai?: {
     provider: "anthropic" | "deepseek" | "gemini";
@@ -76,6 +90,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         ? new SecretString(parsed.GRIDBOT_RISEX_PRIVATE_KEY)
         : undefined,
     },
+    extended:
+      parsed.GRIDBOT_EXTENDED_API_KEY && parsed.GRIDBOT_EXTENDED_VAULT_ID
+        ? {
+            apiKey: new SecretString(parsed.GRIDBOT_EXTENDED_API_KEY),
+            vaultId: parsed.GRIDBOT_EXTENDED_VAULT_ID,
+            allowUnverifiedSigning: parsed.GRIDBOT_EXTENDED_ALLOW_UNVERIFIED_SIGNING ?? false,
+          }
+        : undefined,
     ai:
       parsed.GRIDBOT_AI_PROVIDER && parsed.GRIDBOT_AI_API_KEY
         ? {

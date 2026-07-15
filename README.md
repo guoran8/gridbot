@@ -6,17 +6,19 @@
 
 ## 现状
 
-| 部分 | 状态 |
-|---|---|
-| 网格引擎（等差/等比、中性/做多/做空、均价成本记账） | ✅ 完成，单测覆盖 |
-| 模拟盘（paper）端到端 | ✅ 可用：建 bot → 下网格 → 模拟价格震荡 → 成交/盈亏/成交额落库 |
-| Hono API + SQLite 持久化 + 崩溃恢复 | ✅ |
-| React 面板（实时 SSE、图表、中英双语） | ✅ |
-| AI 顾问（Claude / DeepSeek / Gemini） | ✅ |
-| Telegram / Webhook 通知、代理 | ✅ |
-| **三家 DEX 实盘签名/下单** | 🚧 **接口占位，尚未接实盘**（Phase 6，需各自 API 文档 + 真实 payload 核对） |
+| 部分                                                | 状态                                                               |
+| --------------------------------------------------- | ------------------------------------------------------------------ |
+| 网格引擎（等差/等比、中性/做多/做空、均价成本记账） | ✅ 完成，单测覆盖                                                  |
+| 模拟盘（paper）端到端                               | ✅ 可用：建 bot → 下网格 → 模拟价格震荡 → 成交/盈亏/成交额落库     |
+| Hono API + SQLite 持久化 + 崩溃恢复                 | ✅                                                                 |
+| React 面板（实时 SSE、图表、中英双语）              | ✅                                                                 |
+| AI 顾问（Claude / DeepSeek / Gemini）               | ✅                                                                 |
+| Telegram / Webhook 通知、代理                       | ✅                                                                 |
+| **Extended 实盘**：行情/余额/挂单/撤单              | ✅ 读路径可用（testnet 默认）                                      |
+| **Extended 下单签名**（Stark/SNIP-12）              | ⚠️ **已实现但未验证**——默认拒绝下单，需 testnet 核对签名后显式开启 |
+| Decibel / RISEx 实盘                                | 🚧 stub（后续，需各自 API 文档 + 真实 payload 核对）               |
 
-**在实盘适配器完成前，只跑 `tradingMode: "paper"`。**
+**除非你已在 testnet 核对过 Extended 签名，否则只跑 `tradingMode: "paper"`。** Extended 下单默认抛错，需要 `allowUnverifiedSigning` 才放行——见 `packages/exchanges/src/live/extended/sign.ts` 顶部的验证清单。
 
 ## 技术栈
 
@@ -84,14 +86,14 @@ SQLite 数据落在具名卷 `gridbot-data`。
 
 所有变量 `GRIDBOT_*` 前缀，见 `.env.example`。要点：
 
-| 变量 | 说明 |
-|---|---|
-| `GRIDBOT_PORT` / `GRIDBOT_DB_PATH` | API 端口 / SQLite 路径 |
-| `GRIDBOT_RECONCILE_MS` | 网格重报间隔（ms）；`0` = 关定时器（测试用） |
-| `GRIDBOT_{EXTENDED,DECIBEL,RISEX}_PRIVATE_KEY` | 各所私钥（实盘，Phase 6 才用；**绝不入库/日志**） |
-| `GRIDBOT_AI_PROVIDER` / `GRIDBOT_AI_API_KEY` | AI 顾问，`anthropic`/`deepseek`/`gemini`，留空则关闭 |
-| `GRIDBOT_TELEGRAM_*` / `GRIDBOT_WEBHOOK_URL` | 成交/爆仓/异常通知 |
-| `GRIDBOT_PROXY_URL` | 所有对外 HTTP 走代理 |
+| 变量                                           | 说明                                                 |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| `GRIDBOT_PORT` / `GRIDBOT_DB_PATH`             | API 端口 / SQLite 路径                               |
+| `GRIDBOT_RECONCILE_MS`                         | 网格重报间隔（ms）；`0` = 关定时器（测试用）         |
+| `GRIDBOT_{EXTENDED,DECIBEL,RISEX}_PRIVATE_KEY` | 各所私钥（实盘，Phase 6 才用；**绝不入库/日志**）    |
+| `GRIDBOT_AI_PROVIDER` / `GRIDBOT_AI_API_KEY`   | AI 顾问，`anthropic`/`deepseek`/`gemini`，留空则关闭 |
+| `GRIDBOT_TELEGRAM_*` / `GRIDBOT_WEBHOOK_URL`   | 成交/爆仓/异常通知                                   |
+| `GRIDBOT_PROXY_URL`                            | 所有对外 HTTP 走代理                                 |
 
 ## API 速览
 
