@@ -204,7 +204,20 @@ export class BotManager {
       });
     }
 
-    return createAdapter({ id: config.exchange, credentials: { privateKey: secret.reveal() } });
+    const rise = this.config.risex;
+    if (!rise) {
+      throw new Error("risex needs GRIDBOT_RISEX_ACCOUNT_ADDRESS (plus the EVM signer key)");
+    }
+    return createAdapter({
+      id: "risex",
+      credentials: { privateKey: secret.reveal() },
+      risex: {
+        accountAddress: rise.accountAddress,
+        collateralToken: rise.collateralToken,
+        allowInsecureServerSigning: rise.allowInsecureServerSigning,
+        network: "testnet",
+      },
+    });
   }
 
   private require(id: string): BotRunner {

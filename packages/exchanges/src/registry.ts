@@ -2,7 +2,8 @@ import type { ExchangeId } from "@gridbot/shared";
 import { PaperAdapter, type PaperAdapterOptions } from "./paper/paper-adapter.js";
 import { ExtendedAdapter } from "./live/extended/adapter.js";
 import { DecibelAdapter } from "./live/decibel/adapter.js";
-import { type LiveCredentials, RisexAdapter } from "./live/stubs.js";
+import { RisexAdapter } from "./live/risex/adapter.js";
+import type { LiveCredentials } from "./live/stubs.js";
 import type { ExchangeAdapter } from "./types.js";
 
 export interface ExtendedExtras {
@@ -18,11 +19,18 @@ export interface DecibelExtras {
   network?: "mainnet" | "testnet";
 }
 
+export interface RisexExtras {
+  accountAddress: string;
+  collateralToken?: string;
+  allowInsecureServerSigning?: boolean;
+  network?: "mainnet" | "testnet";
+}
+
 export type AdapterOptions =
   | { id: "paper"; paper: PaperAdapterOptions }
   | { id: "extended"; credentials: LiveCredentials; extended: ExtendedExtras }
   | { id: "decibel"; credentials: LiveCredentials; decibel: DecibelExtras }
-  | { id: "risex"; credentials: LiveCredentials };
+  | { id: "risex"; credentials: LiveCredentials; risex: RisexExtras };
 
 /** Construct the adapter for a venue. Paper needs sim options; live needs keys. */
 export function createAdapter(opts: AdapterOptions): ExchangeAdapter {
@@ -47,7 +55,13 @@ export function createAdapter(opts: AdapterOptions): ExchangeAdapter {
         allowLive: opts.decibel.allowLive ?? false,
       });
     case "risex":
-      return new RisexAdapter(opts.credentials);
+      return new RisexAdapter({
+        privateKey: opts.credentials.privateKey,
+        accountAddress: opts.risex.accountAddress,
+        collateralToken: opts.risex.collateralToken,
+        network: opts.risex.network ?? "testnet",
+        allowInsecureServerSigning: opts.risex.allowInsecureServerSigning ?? false,
+      });
   }
 }
 

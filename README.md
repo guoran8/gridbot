@@ -17,7 +17,7 @@
 | **Extended 实盘**：行情/余额/挂单/撤单              | ✅ 读路径可用（testnet 默认）                                               |
 | **Extended 下单签名**（Stark/SNIP-12，手写）        | ⚠️ **已实现但未验证**——默认拒绝下单，需 testnet 核对签名后显式开启          |
 | **Decibel 实盘**（Aptos，官方 SDK 签名）            | ✅ 读路径可用；下单走官方 `@decibeltrade/sdk`，默认关，`ALLOW_LIVE=true` 开 |
-| RISEx 实盘                                          | 🚧 stub（研究中）                                                           |
+| **RISEx 实盘**（RISE Chain / EVM）                  | ✅ 读路径 + 价格/数量换算可用；下单 EIP-712 struct 未公开，默认拒绝         |
 
 **除非你已在 testnet 核对过 Extended 签名，否则只跑 `tradingMode: "paper"`。** Extended 下单默认抛错，需要 `allowUnverifiedSigning` 才放行——见 `packages/exchanges/src/live/extended/sign.ts` 顶部的验证清单。
 
