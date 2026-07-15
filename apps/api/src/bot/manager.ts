@@ -117,7 +117,20 @@ export class BotManager {
       case "flatten":
         await runner.flatten();
         break;
+      case "recover":
+        await runner.startRecovery();
+        break;
     }
+    return runner.snapshot();
+  }
+
+  /** Live range adjustment — re-band without stopping. */
+  async adjustRange(
+    id: string,
+    band: { lowerPrice: number; upperPrice: number; gridCount: number },
+  ): Promise<BotSnapshot> {
+    const runner = this.require(id);
+    await runner.adjustRange(band);
     return runner.snapshot();
   }
 

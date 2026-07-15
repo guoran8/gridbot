@@ -62,6 +62,8 @@ export const api = {
     req<BotSnapshot>("/v1/bots", { method: "POST", body: JSON.stringify(config) }),
   control: (id: string, action: BotAction) =>
     req<BotSnapshot>(`/v1/bots/${id}/${action}`, { method: "POST" }),
+  adjustRange: (id: string, band: { lowerPrice: number; upperPrice: number; gridCount: number }) =>
+    req<BotSnapshot>(`/v1/bots/${id}/adjust`, { method: "POST", body: JSON.stringify(band) }),
   deleteBot: (id: string) => req<void>(`/v1/bots/${id}`, { method: "DELETE" }),
   listOrders: (id: string) =>
     req<{ orders: Order[] }>(`/v1/bots/${id}/orders`).then((r) => r.orders),

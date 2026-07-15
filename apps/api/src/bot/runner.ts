@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { GridEngine, worstCaseMarginUsd } from "@gridbot/core";
+import { GridEngine, recoveryLadder, worstCaseMarginUsd } from "@gridbot/core";
 import type { ExchangeAdapter, VenueFill } from "@gridbot/exchanges";
 import type { NotifierRegistry } from "@gridbot/services";
 import type {
@@ -67,6 +67,9 @@ export class BotRunner {
   private readonly flattenClientIds = new Set<string>();
   /** Consecutive failure count per action key, for retry escalation. */
   private readonly actionFailures = new Map<string, number>();
+  /** When recovering, the grid loop pauses and a reduce-only ladder unwinds. */
+  private recovering = false;
+  private readonly recoveryOrders = new Map<string, string>(); // clientOrderId → exchangeOrderId
   private seq = 0;
 
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -148,7 +151,14 @@ export class BotRunner {
   async stop(): Promise<void> {
     this.setStatus("stopping");
     this.clearTimer();
+    this.recovering = false;
     await this.cancelAllOrders();
+    // Cancel any leftover recovery-ladder orders too.
+    for (const [cid, eid] of this.recoveryOrders) {
+      await this.adapter.cancelOrder(this.config.symbol, eid).catch(() => {});
+      this.flattenClientIds.delete(cid);
+    }
+    this.recoveryOrders.clear();
     this.unsubFills?.();
     this.unsubMark?.();
     this.unsubFills = null;
@@ -183,6 +193,84 @@ export class BotRunner {
     );
   }
 
+  /**
+   * Live range adjustment — re-band the grid without stopping. Cancels resting
+   * orders, recomputes the ladder around the new band, and re-quotes. Position
+   * and accounting are preserved.
+   */
+  async adjustRange(band: {
+    lowerPrice: number;
+    upperPrice: number;
+    gridCount: number;
+  }): Promise<void> {
+    await this.cancelAllOrders();
+    const mark = this.latestMark || (await this.adapter.getMarkPrice(this.config.symbol));
+    this.engine.reband(band, mark);
+    this.deps.store.updateBot(this.id, {
+      config: JSON.stringify(this.engine.config),
+      updatedAt: Date.now(),
+    });
+    this.log(
+      "info",
+      `range adjusted to [${band.lowerPrice}, ${band.upperPrice}] × ${band.gridCount}`,
+    );
+    this.deps.bus.publish({ type: "snapshot", bot: this.snapshot() });
+    await this.reconcileOnce();
+  }
+
+  /**
+   * Start an out-of-range recovery ladder — pause the grid and place reduce-only
+   * orders stepping away from the mark to gradually unwind the open position.
+   * When the position reaches flat, recovery finishes and the bot stops.
+   */
+  async startRecovery(steps = 5): Promise<void> {
+    await this.cancelAllOrders();
+    const pos = this.engine.position;
+    if (Math.abs(pos.netQty) < PRICE_EPS) {
+      this.log("info", "recovery requested but position is already flat");
+      return;
+    }
+    const mark = this.latestMark || (await this.adapter.getMarkPrice(this.config.symbol));
+    const ladder = recoveryLadder(pos.netQty, mark, steps);
+    this.recovering = true;
+    this.setStatus("running");
+
+    for (const rung of ladder) {
+      const clientOrderId = `${this.id}:recovery:${++this.seq}`;
+      this.flattenClientIds.add(clientOrderId); // fills fold into accounting only
+      try {
+        const vo = await this.adapter.placeOrder({
+          symbol: this.config.symbol,
+          side: rung.side,
+          price: rung.price,
+          size: rung.size,
+          clientOrderId,
+          reduceOnly: true,
+        });
+        this.recoveryOrders.set(clientOrderId, vo.exchangeOrderId);
+      } catch (err) {
+        this.log("warn", `recovery rung failed: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    this.log(
+      "warn",
+      `recovery ladder placed: ${ladder.length} reduce-only ${ladder[0]?.side} rungs`,
+    );
+    this.notify("warn", "Recovery started", `${this.config.symbol}: unwinding ${pos.netQty}`);
+  }
+
+  private async finishRecovery(): Promise<void> {
+    this.recovering = false;
+    for (const [cid, eid] of this.recoveryOrders) {
+      await this.adapter.cancelOrder(this.config.symbol, eid).catch(() => {});
+      this.flattenClientIds.delete(cid);
+    }
+    this.recoveryOrders.clear();
+    this.log("info", "recovery complete — position flat");
+    this.notify("info", "Recovery complete", `${this.config.symbol} is flat`);
+    await this.stop();
+  }
+
   dispose(): void {
     this.clearTimer();
     this.unsubFills?.();
@@ -193,7 +281,7 @@ export class BotRunner {
 
   /** One convergence pass: seed the engine, honour exits, diff and converge orders. */
   async reconcileOnce(): Promise<void> {
-    if (this.reconciling || this.status !== "running") return;
+    if (this.reconciling || this.status !== "running" || this.recovering) return;
     this.reconciling = true;
     try {
       const mark = await this.adapter.getMarkPrice(this.config.symbol);
@@ -394,6 +482,12 @@ export class BotRunner {
       this.deps.bus.publish({ type: "pnl", botId: this.id, pnl: this.engine.pnl(this.latestMark) });
       this.deps.bus.publish({ type: "position", botId: this.id, position: this.buildPosition() });
 
+      // A recovery ladder that has unwound the position back to flat is done.
+      if (this.recovering && Math.abs(this.engine.position.netQty) < PRICE_EPS) {
+        void this.finishRecovery();
+        return;
+      }
+
       // Re-quote the counter rung promptly rather than waiting a full tick.
       void this.reconcileOnce();
     } catch (err) {
@@ -406,7 +500,8 @@ export class BotRunner {
   snapshot(): BotSnapshot {
     return {
       id: this.id,
-      config: this.config,
+      // engine.config carries the live band (may have been re-banded via adjust).
+      config: this.engine.config,
       status: this.status,
       markPrice: this.latestMark,
       levels: this.engine.levels(),

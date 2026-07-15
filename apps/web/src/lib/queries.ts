@@ -55,6 +55,20 @@ export function useDeleteBot() {
   });
 }
 
+export function useAdjustRange() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      band,
+    }: {
+      id: string;
+      band: { lowerPrice: number; upperPrice: number; gridCount: number };
+    }) => api.adjustRange(id, band),
+    onSuccess: () => qc.invalidateQueries({ queryKey: botsKey }),
+  });
+}
+
 export function useAiStatus() {
   return useQuery({ queryKey: ["ai-status"], queryFn: api.aiStatus, staleTime: 60_000 });
 }

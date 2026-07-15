@@ -30,8 +30,8 @@ export interface EngineState {
  * the bot runner can stay a thin IO shell.
  */
 export class GridEngine {
-  readonly config: GridConfig;
-  readonly prices: number[];
+  config: GridConfig;
+  prices: number[];
   private slots: SlotSide[];
   private accounting: AccountingState;
   private initialized = false;
@@ -58,6 +58,22 @@ export class GridEngine {
 
   isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * Re-band the grid to a new price range without stopping — recompute the
+   * ladder and re-seed the slot map from the current mark. Accounting/position
+   * are preserved; the runner cancels the old resting orders and places the new
+   * ones on the next reconcile.
+   */
+  reband(
+    band: { lowerPrice: number; upperPrice: number; gridCount: number },
+    markPrice: number,
+  ): void {
+    this.config = { ...this.config, ...band };
+    this.prices = computeLevelPrices(this.config);
+    this.slots = initialSlots(this.prices, markPrice, this.config.mode);
+    this.initialized = true;
   }
 
   /** Orders that should currently rest, given the mark. */

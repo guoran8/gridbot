@@ -3,6 +3,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/status-badge";
+import { AdjustRange } from "@/features/bots/adjust-range";
 import { GridChart } from "@/features/bots/grid-chart";
 import { FillsTable, OrdersTable } from "@/features/bots/order-tables";
 import { useBots, useControlBot, useDeleteBot } from "@/lib/queries";
@@ -81,6 +82,17 @@ function BotDetailPage() {
           >
             {t("action.flatten")}
           </Button>
+          {bot.position && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (confirm(t("action.confirmRecover"))) control.mutate({ id, action: "recover" });
+              }}
+            >
+              {t("action.recover")}
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -93,6 +105,13 @@ function BotDetailPage() {
           </Button>
         </div>
       </div>
+
+      <Card>
+        <CardContent className="flex flex-col gap-2 pt-4">
+          <span className="text-sm font-medium">{t("adjust.title")}</span>
+          <AdjustRange bot={bot} />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
         <Metric label={t("bot.mark")} value={fmtUsd(bot.markPrice)} />

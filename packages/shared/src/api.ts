@@ -7,8 +7,16 @@ export const CreateBotRequestSchema = GridConfigSchema;
 export type CreateBotRequest = z.infer<typeof CreateBotRequestSchema>;
 
 /** Control actions for POST /v1/bots/:id/:action. */
-export const BotActionSchema = z.enum(["start", "pause", "resume", "stop", "flatten"]);
+export const BotActionSchema = z.enum(["start", "pause", "resume", "stop", "flatten", "recover"]);
 export type BotAction = z.infer<typeof BotActionSchema>;
+
+/** Body for POST /v1/bots/:id/adjust — live range re-band. */
+export const AdjustRangeSchema = z.object({
+  lowerPrice: z.number().finite().positive(),
+  upperPrice: z.number().finite().positive(),
+  gridCount: z.number().int().min(2).max(500),
+});
+export type AdjustRangeRequest = z.infer<typeof AdjustRangeSchema>;
 
 export const BotListResponseSchema = z.object({
   bots: z.array(BotSnapshotSchema),

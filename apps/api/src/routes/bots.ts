@@ -1,10 +1,10 @@
-import { CreateBotRequestSchema } from "@gridbot/shared";
+import { AdjustRangeSchema, CreateBotRequestSchema } from "@gridbot/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppContainer } from "../app.js";
 import { GridEconomicsError } from "../bot/manager.js";
 
-const BotActionParam = z.enum(["start", "pause", "resume", "stop", "flatten"]);
+const BotActionParam = z.enum(["start", "pause", "resume", "stop", "flatten", "recover"]);
 
 /** /v1/bots — create, list, inspect, control, and delete grid bot instances. */
 export function botsRoutes(c: AppContainer): Hono {
@@ -50,6 +50,39 @@ export function botsRoutes(c: AppContainer): Hono {
       return ctx.json({ error: { code: "not_found", message: "bot not found" } }, 404);
     await c.manager.deleteBot(id);
     return ctx.body(null, 204);
+  });
+
+  // Live range adjustment (body-carrying) — must precede the generic action route.
+  app.post("/:id/adjust", async (ctx) => {
+    const id = ctx.req.param("id");
+    if (!c.manager.has(id))
+      return ctx.json({ error: { code: "not_found", message: "bot not found" } }, 404);
+    const body = await ctx.req.json().catch(() => null);
+    const parsed = AdjustRangeSchema.safeParse(body);
+    if (!parsed.success) {
+      return ctx.json(
+        {
+          error: {
+            code: "invalid_range",
+            message: "invalid range",
+            details: parsed.error.flatten(),
+          },
+        },
+        400,
+      );
+    }
+    if (parsed.data.upperPrice <= parsed.data.lowerPrice) {
+      return ctx.json(
+        { error: { code: "invalid_range", message: "upper must exceed lower" } },
+        400,
+      );
+    }
+    try {
+      return ctx.json(await c.manager.adjustRange(id, parsed.data));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return ctx.json({ error: { code: "adjust_failed", message } }, 500);
+    }
   });
 
   app.post("/:id/:action", async (ctx) => {
