@@ -25,6 +25,7 @@ function RootLayout() {
             <nav className="flex items-center gap-1">
               <NavLink to="/">{t("nav.overview")}</NavLink>
               <NavLink to="/create">{t("nav.create")}</NavLink>
+              <NavLink to="/venues">{t("nav.venues")}</NavLink>
               <NavLink to="/logs">{t("nav.logs")}</NavLink>
             </nav>
           </div>

@@ -12,6 +12,7 @@ import type { AppConfig } from "../config.js";
 import type { BotStore } from "../db/store.js";
 import type { EventBus } from "../events/bus.js";
 import type { Logger } from "../logger.js";
+import { buildLiveAdapter } from "../venues/build-adapter.js";
 import { BotRunner, type RunnerDeps } from "./runner.js";
 
 /** Deterministic 32-bit seed from a bot id, so paper sims are reproducible per bot. */
@@ -162,62 +163,7 @@ export class BotManager {
         },
       });
     }
-    const secret = this.config.credentials[config.exchange];
-    if (!secret) {
-      throw new Error(
-        `no credentials configured for ${config.exchange} — set GRIDBOT_${config.exchange.toUpperCase()}_PRIVATE_KEY`,
-      );
-    }
-
-    if (config.exchange === "extended") {
-      const ext = this.config.extended;
-      if (!ext) {
-        throw new Error(
-          "extended needs GRIDBOT_EXTENDED_API_KEY + GRIDBOT_EXTENDED_VAULT_ID (plus the Stark private key)",
-        );
-      }
-      return createAdapter({
-        id: "extended",
-        credentials: { privateKey: secret.reveal(), apiKey: ext.apiKey.reveal() },
-        extended: {
-          vaultId: ext.vaultId,
-          allowUnverifiedSigning: ext.allowUnverifiedSigning,
-          network: "testnet",
-        },
-      });
-    }
-
-    if (config.exchange === "decibel") {
-      const dec = this.config.decibel;
-      if (!dec) {
-        throw new Error("decibel needs GRIDBOT_DECIBEL_SUBACCOUNT_ADDRESS (plus the Ed25519 key)");
-      }
-      return createAdapter({
-        id: "decibel",
-        credentials: { privateKey: secret.reveal() },
-        decibel: {
-          subaccountAddress: dec.subaccountAddress,
-          nodeApiKey: dec.nodeApiKey,
-          allowLive: dec.allowLive,
-          network: "testnet",
-        },
-      });
-    }
-
-    const rise = this.config.risex;
-    if (!rise) {
-      throw new Error("risex needs GRIDBOT_RISEX_ACCOUNT_ADDRESS (plus the EVM signer key)");
-    }
-    return createAdapter({
-      id: "risex",
-      credentials: { privateKey: secret.reveal() },
-      risex: {
-        accountAddress: rise.accountAddress,
-        collateralToken: rise.collateralToken,
-        allowInsecureServerSigning: rise.allowInsecureServerSigning,
-        network: "testnet",
-      },
-    });
+    return buildLiveAdapter(this.config, config.exchange);
   }
 
   private require(id: string): BotRunner {

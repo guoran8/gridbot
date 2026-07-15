@@ -18,6 +18,7 @@ import { aiRoutes } from "./routes/ai.js";
 import { botsRoutes } from "./routes/bots.js";
 import { streamRoutes } from "./routes/stream.js";
 import { systemRoutes } from "./routes/system.js";
+import { venuesRoutes } from "./routes/venues.js";
 
 export interface AppContainer {
   config: AppConfig;
@@ -79,6 +80,7 @@ export function createApp(c: AppContainer): Hono {
   app.route("/v1/bots", botsRoutes(c));
   app.route("/v1/stream", streamRoutes(c));
   app.route("/v1/ai", aiRoutes(c));
+  app.route("/v1/venues", venuesRoutes(c));
 
   app.onError((err, ctx) => {
     c.logger.error({ err }, "unhandled route error");

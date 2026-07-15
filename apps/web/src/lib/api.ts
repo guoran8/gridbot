@@ -16,6 +16,20 @@ export interface GridAdvice {
   rationale: string;
 }
 
+export interface VenueStatus {
+  id: "extended" | "decibel" | "risex";
+  configured: boolean;
+  network: string;
+  liveTradingEnabled: boolean;
+}
+
+export interface VenueProbe {
+  id: string;
+  symbol: string | null;
+  balanceUsd: number | null;
+  markPrice: number | null;
+}
+
 /** API base — same-origin in dev (Vite proxy), overridable for prod builds. */
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -48,6 +62,11 @@ export const api = {
   aiStatus: () => req<{ enabled: boolean; provider: string | null }>("/v1/ai/status"),
   advise: (input: { symbol: string; markPrice: number; closes?: number[] }) =>
     req<GridAdvice>("/v1/ai/advise", { method: "POST", body: JSON.stringify(input) }),
+  listVenues: () => req<{ venues: VenueStatus[] }>("/v1/venues").then((r) => r.venues),
+  probeVenue: (id: string, symbol?: string) =>
+    req<VenueProbe>(
+      `/v1/venues/${id}/probe${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`,
+    ),
 };
 
 export { BASE as API_BASE };

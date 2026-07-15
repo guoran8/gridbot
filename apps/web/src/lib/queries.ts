@@ -65,3 +65,13 @@ export function useAdvise() {
       api.advise(input),
   });
 }
+
+export function useVenues() {
+  return useQuery({ queryKey: ["venues"], queryFn: api.listVenues, staleTime: 30_000 });
+}
+
+export function useProbeVenue() {
+  return useMutation({
+    mutationFn: ({ id, symbol }: { id: string; symbol?: string }) => api.probeVenue(id, symbol),
+  });
+}
