@@ -65,6 +65,8 @@ export class BotRunner {
   private readonly openByIndex = new Map<number, TrackedOrder>();
   private readonly clientToIndex = new Map<string, number>();
   private readonly flattenClientIds = new Set<string>();
+  /** Consecutive failure count per action key, for retry escalation. */
+  private readonly actionFailures = new Map<string, number>();
   private seq = 0;
 
   private timer: ReturnType<typeof setInterval> | null = null;
@@ -203,22 +205,52 @@ export class BotRunner {
       const desired = this.engine.desiredOrders(mark);
       const desiredByIndex = new Map(desired.map((d) => [d.gridIndex, d]));
 
-      // Cancel stale / mismatched resting orders.
+      // Cancel stale / mismatched resting orders. A transient cancel failure is
+      // retried next tick (the order stays tracked), not fatal.
       for (const [gi, tracked] of [...this.openByIndex]) {
         const d = desiredByIndex.get(gi);
         if (!d || d.side !== tracked.side || Math.abs(d.price - tracked.price) > PRICE_EPS) {
-          await this.cancelTracked(tracked);
+          await this.withRetry(`cancel:${tracked.exchangeOrderId}`, () =>
+            this.cancelTracked(tracked),
+          );
         }
       }
-      // Place newly-desired orders.
+      // Place newly-desired orders. A failed place isn't tracked, so the next
+      // reconcile re-attempts it (backoff = reconcile interval).
       for (const d of desired) {
         if (this.openByIndex.has(d.gridIndex)) continue;
-        await this.placeOrder(d.gridIndex, d.side, d.price, d.size, d.reduceOnly);
+        await this.withRetry(`place:${d.gridIndex}`, () =>
+          this.placeOrder(d.gridIndex, d.side, d.price, d.size, d.reduceOnly),
+        );
       }
     } catch (err) {
       this.fail(err);
     } finally {
       this.reconciling = false;
+    }
+  }
+
+  /** Max consecutive per-action failures before the error escalates to fatal. */
+  private static readonly MAX_ACTION_RETRIES = 6;
+
+  /**
+   * Run a venue action; on failure, count it and swallow (the reconcile loop
+   * naturally retries next tick). Escalate to a fatal error only after
+   * MAX_ACTION_RETRIES consecutive failures for the same action key.
+   */
+  private async withRetry(key: string, fn: () => Promise<void>): Promise<void> {
+    try {
+      await fn();
+      this.actionFailures.delete(key);
+    } catch (err) {
+      const count = (this.actionFailures.get(key) ?? 0) + 1;
+      this.actionFailures.set(key, count);
+      const message = err instanceof Error ? err.message : String(err);
+      if (count >= BotRunner.MAX_ACTION_RETRIES) {
+        this.actionFailures.delete(key);
+        throw new Error(`${key} failed ${count}× (last: ${message})`, { cause: err });
+      }
+      this.log("warn", `${key} failed (attempt ${count}, will retry): ${message}`);
     }
   }
 
