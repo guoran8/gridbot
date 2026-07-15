@@ -18,6 +18,7 @@
     "@dotenvx/dotenvx": "^2.7.0",
     "@gridbot/core": "workspace:*",
     "@gridbot/exchanges": "workspace:*",
+    "@gridbot/services": "workspace:*",
     "@gridbot/shared": "workspace:*",
     "@hono/node-server": "^2.0.0",
     "better-sqlite3": "^12.11.0",

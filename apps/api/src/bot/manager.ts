@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type EngineState, GridEngine } from "@gridbot/core";
 import { createAdapter, type ExchangeAdapter } from "@gridbot/exchanges";
+import type { NotifierRegistry } from "@gridbot/services";
 import {
   type BotAction,
   type BotSnapshot,
@@ -37,8 +38,9 @@ export class BotManager {
     private readonly store: BotStore,
     private readonly bus: EventBus,
     private readonly logger: Logger,
+    notifiers?: NotifierRegistry,
   ) {
-    this.deps = { store, bus, logger, reconcileMs: config.reconcileMs };
+    this.deps = { store, bus, logger, reconcileMs: config.reconcileMs, notifiers };
   }
 
   /** Rehydrate persisted bots. Bots that were running are resumed. */

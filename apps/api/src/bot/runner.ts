@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { GridEngine } from "@gridbot/core";
 import type { ExchangeAdapter, VenueFill } from "@gridbot/exchanges";
+import type { NotifierRegistry } from "@gridbot/services";
 import type {
   BotSnapshot,
   BotStatus,
@@ -28,6 +29,7 @@ export interface RunnerDeps {
   bus: EventBus;
   logger: Logger;
   reconcileMs: number;
+  notifiers?: NotifierRegistry;
 }
 
 export interface RunnerInit {
@@ -208,11 +210,21 @@ export class BotRunner {
     const { stopLossPrice, takeProfitPrice } = this.config;
     if (stopLossPrice !== undefined && mark <= stopLossPrice) {
       this.log("warn", `stop-loss hit at ${mark} (<= ${stopLossPrice})`);
+      this.notify(
+        "warn",
+        "Stop-loss hit",
+        `${this.config.symbol} at ${mark} — flattening and stopping`,
+      );
       void this.flatten().then(() => this.stop());
       return true;
     }
     if (takeProfitPrice !== undefined && mark >= takeProfitPrice) {
       this.log("warn", `take-profit hit at ${mark} (>= ${takeProfitPrice})`);
+      this.notify(
+        "info",
+        "Take-profit hit",
+        `${this.config.symbol} at ${mark} — flattening and stopping`,
+      );
       void this.flatten().then(() => this.stop());
       return true;
     }
@@ -416,6 +428,18 @@ export class BotRunner {
     this.clearTimer();
     this.setStatus("error");
     this.log("error", this.lastError);
+    this.notify("error", "Bot error", `${this.config.symbol}: ${this.lastError}`);
+  }
+
+  /** Best-effort push notification; never throws into the caller. */
+  private notify(level: LogLevel, title: string, body: string): void {
+    if (!this.deps.notifiers || this.deps.notifiers.size === 0) return;
+    void this.deps.notifiers.notify({
+      title,
+      body,
+      level: level === "debug" ? "info" : level,
+      botId: this.id,
+    });
   }
 
   private clearTimer(): void {

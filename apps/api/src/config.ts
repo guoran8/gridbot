@@ -14,6 +14,19 @@ const EnvSchema = z.object({
   GRIDBOT_EXTENDED_PRIVATE_KEY: z.string().optional(),
   GRIDBOT_DECIBEL_PRIVATE_KEY: z.string().optional(),
   GRIDBOT_RISEX_PRIVATE_KEY: z.string().optional(),
+
+  // --- AI advisor (optional) ---
+  GRIDBOT_AI_PROVIDER: z.enum(["anthropic", "deepseek", "gemini"]).optional(),
+  GRIDBOT_AI_API_KEY: z.string().optional(),
+  GRIDBOT_AI_MODEL: z.string().optional(),
+
+  // --- Notifications (optional) ---
+  GRIDBOT_TELEGRAM_BOT_TOKEN: z.string().optional(),
+  GRIDBOT_TELEGRAM_CHAT_ID: z.string().optional(),
+  GRIDBOT_WEBHOOK_URL: z.string().url().optional(),
+
+  // --- Outbound proxy for exchange/AI calls (optional) ---
+  GRIDBOT_PROXY_URL: z.string().url().optional(),
 });
 
 export interface AppConfig {
@@ -27,6 +40,14 @@ export interface AppConfig {
     decibel?: SecretString;
     risex?: SecretString;
   };
+  ai?: {
+    provider: "anthropic" | "deepseek" | "gemini";
+    apiKey: SecretString;
+    model?: string;
+  };
+  telegram?: { botToken: SecretString; chatId: string };
+  webhookUrl?: string;
+  proxyUrl?: string;
 }
 
 /** Parse + validate process env into a typed config, wrapping secrets. */
@@ -49,5 +70,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         ? new SecretString(parsed.GRIDBOT_RISEX_PRIVATE_KEY)
         : undefined,
     },
+    ai:
+      parsed.GRIDBOT_AI_PROVIDER && parsed.GRIDBOT_AI_API_KEY
+        ? {
+            provider: parsed.GRIDBOT_AI_PROVIDER,
+            apiKey: new SecretString(parsed.GRIDBOT_AI_API_KEY),
+            model: parsed.GRIDBOT_AI_MODEL,
+          }
+        : undefined,
+    telegram:
+      parsed.GRIDBOT_TELEGRAM_BOT_TOKEN && parsed.GRIDBOT_TELEGRAM_CHAT_ID
+        ? {
+            botToken: new SecretString(parsed.GRIDBOT_TELEGRAM_BOT_TOKEN),
+            chatId: parsed.GRIDBOT_TELEGRAM_CHAT_ID,
+          }
+        : undefined,
+    webhookUrl: parsed.GRIDBOT_WEBHOOK_URL,
+    proxyUrl: parsed.GRIDBOT_PROXY_URL,
   };
 }
