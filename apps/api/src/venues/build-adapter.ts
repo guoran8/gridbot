@@ -68,7 +68,7 @@ export function buildLiveAdapter(config: AppConfig, exchange: LiveExchangeId): E
         risex: {
           accountAddress: rise.accountAddress,
           collateralToken: rise.collateralToken,
-          allowInsecureServerSigning: rise.allowInsecureServerSigning,
+          allowLive: rise.allowLive,
           network: "testnet",
         },
       });

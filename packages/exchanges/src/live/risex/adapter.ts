@@ -1,4 +1,5 @@
 import type { ExchangeId } from "@gridbot/shared";
+import { type ExchangeClient, OrderType, Side, StpMode, TimeInForce } from "risex-client";
 import type {
   ExchangeAdapter,
   PlaceOrderParams,
@@ -9,7 +10,7 @@ import type {
 import { priceToTicks, RisexClient, type RisexNetwork, sizeToSteps } from "./client.js";
 
 export interface RisexAdapterConfig {
-  /** EVM API-wallet private key (hex). */
+  /** Signer/session-key private key (hex). Registered in the RISEx web UI. */
   privateKey: string;
   /** Account address (0x…) that holds collateral. */
   accountAddress: string;
@@ -19,43 +20,43 @@ export interface RisexAdapterConfig {
   /** Token address for balance queries (USDC on RISE). */
   collateralToken?: string;
   /**
-   * DEV/TEST ONLY. When set, placement uses the API's `signer_private_key`
-   * permit field — i.e. the RISEx server signs on your behalf, which means
-   * sending the key to the API. Never enable this with real funds.
+   * Placement uses the community risex-client SDK's EIP-712 signing (local, key
+   * never leaves the process). Still gated: RISE is an early-mainnet venue and
+   * the SDK is explicitly "not production ready", so live trading is opt-in.
    */
-  allowInsecureServerSigning?: boolean;
+  allowLive?: boolean;
 }
 
+const REST_BASE = {
+  mainnet: "https://api.rise.trade",
+  testnet: "https://api.testnet.rise.trade",
+} as const;
+
 /**
- * Live RISEx (RISE Chain) adapter. Reads (markets, mark price, balance) work.
- *
- * ⚠️ Order placement is NOT production-ready: RISEx signs orders with an
- * EIP-712 "VerifyWitness" permit whose struct + nonce scheme are not yet
- * published (the API is under heavy development). The only documented path is
- * the dev-only `signer_private_key` field, which sends the key to the server —
- * so `placeOrder` throws unless `allowInsecureServerSigning` is explicitly set
- * (testnet only). Client-side EIP-712 signing lands when RISEx publishes the
- * typed-data struct.
+ * Live RISEx (RISE Chain) adapter. Reads go through the plain REST client;
+ * order placement/cancellation go through the community `risex-client` SDK,
+ * which signs the EIP-712 VerifyWitness permit locally with the signer key
+ * (ethers). Placement is gated behind `allowLive`.
  */
 export class RisexAdapter implements ExchangeAdapter {
   readonly id: ExchangeId = "risex";
 
-  private readonly client: RisexClient;
+  private readonly reader: RisexClient;
   private readonly config: RisexAdapterConfig;
+  private readonly network: RisexNetwork;
   private readonly pollMs: number;
   private readonly markTimers = new Set<ReturnType<typeof setInterval>>();
+  private exchange: ExchangeClient | null = null;
 
   constructor(config: RisexAdapterConfig) {
     this.config = config;
+    this.network = config.network ?? "testnet";
     this.pollMs = config.pollMs ?? 2000;
-    this.client = new RisexClient({
-      network: config.network ?? "testnet",
-      fetchImpl: config.fetchImpl,
-    });
+    this.reader = new RisexClient({ network: this.network, fetchImpl: config.fetchImpl });
   }
 
   async connect(): Promise<void> {
-    /* stateless REST client */
+    /* readers are stateless; the signing client is built lazily on first order */
   }
 
   async disconnect(): Promise<void> {
@@ -64,52 +65,59 @@ export class RisexAdapter implements ExchangeAdapter {
   }
 
   getMarkPrice(symbol: string): Promise<number> {
-    return this.client.getMarkPrice(symbol);
+    return this.reader.getMarkPrice(symbol);
   }
 
   async getBalanceUsd(): Promise<number> {
-    const raw = await this.client.getBalance(
+    const raw = await this.reader.getBalance(
       this.config.accountAddress,
       this.config.collateralToken,
     );
     return Number(raw);
   }
 
+  /** Lazily build + init the signing client (dynamic import keeps ethers off the read path). */
+  private async getExchange(): Promise<ExchangeClient> {
+    if (this.exchange) return this.exchange;
+    const { ExchangeClient } = await import("risex-client");
+    const client = new ExchangeClient({
+      account: this.config.accountAddress,
+      signerKey: this.config.privateKey,
+      baseUrl: REST_BASE[this.network],
+    });
+    await client.init();
+    this.exchange = client;
+    return client;
+  }
+
   async placeOrder(params: PlaceOrderParams): Promise<VenueOrder> {
-    if (!this.config.allowInsecureServerSigning) {
+    if (!this.config.allowLive) {
       throw new Error(
-        "[risex] order placement is not enabled — RISEx's EIP-712 VerifyWitness " +
-          "struct is not published, and the only documented path (permit.signer_private_key) " +
-          "sends your key to the API. Testnet-only: set allowInsecureServerSigning: true. " +
-          "See packages/exchanges/src/live/risex/adapter.ts.",
+        "[risex] live trading disabled — RISE is early-mainnet and risex-client is " +
+          "marked not-production-ready. Set allowLive: true after testnet validation.",
       );
     }
-    const market = await this.client.getMarket(params.symbol);
+    const market = await this.reader.getMarket(params.symbol);
     const priceTicks = priceToTicks(params.price, Number(market.step_price));
     const sizeSteps = sizeToSteps(params.size, Number(market.step_size));
+    const exchange = await this.getExchange();
 
-    const placed = await this.client.placeOrder({
+    const res = await exchange.placeOrder({
       market_id: market.market_id,
-      size_steps: sizeSteps,
+      side: params.side === "buy" ? Side.Long : Side.Short,
+      order_type: OrderType.Limit,
       price_ticks: priceTicks,
-      side: params.side === "buy" ? 0 : 1,
+      size_steps: sizeSteps,
+      time_in_force: TimeInForce.GoodTillCancelled,
       post_only: !params.reduceOnly,
       reduce_only: params.reduceOnly ?? false,
-      order_type: 1, // Limit
-      time_in_force: 0, // GTC
+      stp_mode: StpMode.ExpireMaker,
+      ttl_units: 0,
       client_order_id: params.clientOrderId,
-      permit: {
-        account: this.config.accountAddress,
-        signer: this.config.accountAddress,
-        deadline: Math.floor(Date.now() / 1000) + 60,
-        // DEV ONLY — server-side signing.
-        signer_private_key: this.config.privateKey,
-      },
-      no_retry: false,
     });
 
     return {
-      exchangeOrderId: placed.order_id,
+      exchangeOrderId: res.order_id,
       clientOrderId: params.clientOrderId,
       symbol: params.symbol,
       side: params.side,
@@ -120,26 +128,31 @@ export class RisexAdapter implements ExchangeAdapter {
   }
 
   async cancelOrder(symbol: string, exchangeOrderId: string): Promise<void> {
-    if (!this.config.allowInsecureServerSigning) return;
-    const market = await this.client.getMarket(symbol);
-    await this.client.cancelOrder({
-      market_id: market.market_id,
-      order_id: exchangeOrderId,
-      permit: {
-        account: this.config.accountAddress,
-        signer: this.config.accountAddress,
-        deadline: Math.floor(Date.now() / 1000) + 60,
-        signer_private_key: this.config.privateKey,
-      },
-      no_retry: false,
-    });
+    if (!this.config.allowLive) return;
+    const market = await this.reader.getMarket(symbol);
+    const exchange = await this.getExchange();
+    await exchange.cancelOrder({ market_id: market.market_id, order_id: exchangeOrderId });
   }
 
-  async getOpenOrders(_symbol: string): Promise<VenueOrder[]> {
-    // RISEx's open-orders endpoint path isn't stably documented yet; the runner
-    // reconciles from its own tracked set, so returning [] is safe (no orders
-    // are ever placed live until signing is enabled anyway).
-    return [];
+  async getOpenOrders(symbol: string): Promise<VenueOrder[]> {
+    const market = await this.reader.getMarket(symbol).catch(() => null);
+    if (!market) return [];
+    try {
+      const { InfoClient } = await import("risex-client");
+      const info = new InfoClient({ baseUrl: REST_BASE[this.network] });
+      const orders = await info.getOpenOrders(this.config.accountAddress, market.market_id);
+      return orders.map((o) => ({
+        exchangeOrderId: String(o.order_id),
+        clientOrderId: String(o.client_order_id ?? o.order_id),
+        symbol,
+        side: Number(o.side) === Side.Long ? "buy" : "sell",
+        price: priceToNumber(o.price_ticks, Number(market.step_price)),
+        size: sizeToNumber(o.size_steps, Number(market.step_size)),
+        status: "open" as const,
+      }));
+    } catch {
+      return [];
+    }
   }
 
   watchFills(_symbol: string, _cb: (fill: VenueFill) => void): Unsubscribe {
@@ -148,7 +161,7 @@ export class RisexAdapter implements ExchangeAdapter {
 
   watchMarkPrice(symbol: string, cb: (mark: number) => void): Unsubscribe {
     const timer = setInterval(() => {
-      void this.client
+      void this.reader
         .getMarkPrice(symbol)
         .then(cb)
         .catch(() => {});
@@ -160,4 +173,11 @@ export class RisexAdapter implements ExchangeAdapter {
       this.markTimers.delete(timer);
     };
   }
+}
+
+function priceToNumber(ticks: unknown, stepPrice: number): number {
+  return Number(ticks) * stepPrice;
+}
+function sizeToNumber(steps: unknown, stepSize: number): number {
+  return Number(steps) * stepSize;
 }

@@ -12,7 +12,7 @@ function venueStatus(c: AppContainer) {
     let liveTradingEnabled = false;
     if (id === "extended") liveTradingEnabled = c.config.extended?.allowUnverifiedSigning ?? false;
     if (id === "decibel") liveTradingEnabled = c.config.decibel?.allowLive ?? false;
-    if (id === "risex") liveTradingEnabled = c.config.risex?.allowInsecureServerSigning ?? false;
+    if (id === "risex") liveTradingEnabled = c.config.risex?.allowLive ?? false;
     return {
       id,
       configured: configured.has(id),

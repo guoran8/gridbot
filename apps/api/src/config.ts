@@ -30,12 +30,11 @@ const EnvSchema = z.object({
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
-  // RISEx (RISE Chain): EVM signer key + account address.
+  // RISEx (RISE Chain): EVM signer/session key + account address.
   GRIDBOT_RISEX_PRIVATE_KEY: z.string().optional(),
   GRIDBOT_RISEX_ACCOUNT_ADDRESS: z.string().optional(),
   GRIDBOT_RISEX_COLLATERAL_TOKEN: z.string().optional(),
-  // Testnet-only: uses the API's server-side signing (sends key to the server).
-  GRIDBOT_RISEX_ALLOW_INSECURE_SERVER_SIGNING: z
+  GRIDBOT_RISEX_ALLOW_LIVE: z
     .enum(["true", "false"])
     .optional()
     .transform((v) => v === "true"),
@@ -78,11 +77,11 @@ export interface AppConfig {
     nodeApiKey?: string;
     allowLive: boolean;
   };
-  /** RISEx-specific extras (EVM key lives in credentials.risex). */
+  /** RISEx-specific extras (EVM signer key lives in credentials.risex). */
   risex?: {
     accountAddress: string;
     collateralToken?: string;
-    allowInsecureServerSigning: boolean;
+    allowLive: boolean;
   };
   ai?: {
     provider: "anthropic" | "deepseek" | "gemini";
@@ -140,7 +139,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       ? {
           accountAddress: parsed.GRIDBOT_RISEX_ACCOUNT_ADDRESS,
           collateralToken: parsed.GRIDBOT_RISEX_COLLATERAL_TOKEN,
-          allowInsecureServerSigning: parsed.GRIDBOT_RISEX_ALLOW_INSECURE_SERVER_SIGNING ?? false,
+          allowLive: parsed.GRIDBOT_RISEX_ALLOW_LIVE ?? false,
         }
       : undefined,
     ai:

@@ -22,7 +22,7 @@ export interface DecibelExtras {
 export interface RisexExtras {
   accountAddress: string;
   collateralToken?: string;
-  allowInsecureServerSigning?: boolean;
+  allowLive?: boolean;
   network?: "mainnet" | "testnet";
 }
 
@@ -60,7 +60,7 @@ export function createAdapter(opts: AdapterOptions): ExchangeAdapter {
         accountAddress: opts.risex.accountAddress,
         collateralToken: opts.risex.collateralToken,
         network: opts.risex.network ?? "testnet",
-        allowInsecureServerSigning: opts.risex.allowInsecureServerSigning ?? false,
+        allowLive: opts.risex.allowLive ?? false,
       });
   }
 }

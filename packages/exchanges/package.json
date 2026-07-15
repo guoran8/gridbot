@@ -15,6 +15,7 @@
     "@decibeltrade/sdk": "^0.7.0",
     "@gridbot/core": "workspace:*",
     "@gridbot/shared": "workspace:*",
+    "risex-client": "^0.1.11",
     "starknet": "^10.0.0",
     "zod": "^3.25.62"
   },
