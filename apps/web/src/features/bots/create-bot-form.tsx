@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreateBot } from "@/lib/queries";
+import { Sparkles } from "lucide-react";
+import { useAdvise, useAiStatus, useCreateBot } from "@/lib/queries";
 import { useI18n } from "@/lib/i18n";
 
 const EXCHANGES = ["paper", "extended", "decibel", "risex"] as const;
@@ -24,6 +25,8 @@ export function CreateBotForm() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const createBot = useCreateBot();
+  const aiStatus = useAiStatus();
+  const advise = useAdvise();
 
   const form = useForm({
     defaultValues: {
@@ -55,11 +58,51 @@ export function CreateBotForm() {
     },
   });
 
+  const runAdvise = async () => {
+    const v = form.state.values;
+    const lower = Number(v.lowerPrice);
+    const upper = Number(v.upperPrice);
+    if (!(lower > 0) || !(upper > lower)) {
+      toast.info(t("ai.needPrice"));
+      return;
+    }
+    const markPrice = (lower + upper) / 2;
+    try {
+      const advice = await advise.mutateAsync({ symbol: v.symbol, markPrice });
+      form.setFieldValue("mode", advice.mode);
+      form.setFieldValue("lowerPrice", advice.lowerPrice);
+      form.setFieldValue("upperPrice", advice.upperPrice);
+      form.setFieldValue("gridCount", advice.gridCount);
+      toast.success(t("ai.applied"), { description: advice.rationale });
+    } catch (err) {
+      toast.error(t("ai.failed"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    }
+  };
+
+  const aiEnabled = aiStatus.data?.enabled ?? false;
+
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>{t("create.title")}</CardTitle>
-        <p className="text-sm text-muted-foreground">{t("create.paperOnly")}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <CardTitle>{t("create.title")}</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{t("create.paperOnly")}</p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={!aiEnabled || advise.isPending}
+            title={aiEnabled ? undefined : t("ai.disabled")}
+            onClick={() => void runAdvise()}
+          >
+            <Sparkles className="size-3.5" />
+            {advise.isPending ? t("ai.thinking") : t("ai.suggest")}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <form

@@ -1,4 +1,20 @@
-import type { BotAction, BotSnapshot, Fill, GridConfig, LogEntry, Order } from "@gridbot/shared";
+import type {
+  BotAction,
+  BotSnapshot,
+  Fill,
+  GridConfig,
+  GridMode,
+  LogEntry,
+  Order,
+} from "@gridbot/shared";
+
+export interface GridAdvice {
+  mode: GridMode;
+  lowerPrice: number;
+  upperPrice: number;
+  gridCount: number;
+  rationale: string;
+}
 
 /** API base — same-origin in dev (Vite proxy), overridable for prod builds. */
 const BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -29,6 +45,9 @@ export const api = {
     req<{ orders: Order[] }>(`/v1/bots/${id}/orders`).then((r) => r.orders),
   listFills: (id: string) => req<{ fills: Fill[] }>(`/v1/bots/${id}/fills`).then((r) => r.fills),
   listLogs: () => req<{ logs: LogEntry[] }>("/logs").then((r) => r.logs),
+  aiStatus: () => req<{ enabled: boolean; provider: string | null }>("/v1/ai/status"),
+  advise: (input: { symbol: string; markPrice: number; closes?: number[] }) =>
+    req<GridAdvice>("/v1/ai/advise", { method: "POST", body: JSON.stringify(input) }),
 };
 
 export { BASE as API_BASE };

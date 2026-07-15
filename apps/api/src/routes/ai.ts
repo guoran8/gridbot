@@ -5,7 +5,9 @@ import type { AppContainer } from "../app.js";
 const AdviceRequestSchema = z.object({
   symbol: z.string().min(1),
   markPrice: z.number().finite().positive(),
-  closes: z.array(z.number().finite().positive()).min(10),
+  // Optional recent closes (oldest first). When absent/short the advisor falls
+  // back to a mark-centered band; more history → better trend grounding.
+  closes: z.array(z.number().finite().positive()).default([]),
 });
 
 /** /v1/ai — LLM-backed grid parameter advice (optional; requires GRIDBOT_AI_*). */

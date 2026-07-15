@@ -54,3 +54,14 @@ export function useDeleteBot() {
     onSuccess: () => qc.invalidateQueries({ queryKey: botsKey }),
   });
 }
+
+export function useAiStatus() {
+  return useQuery({ queryKey: ["ai-status"], queryFn: api.aiStatus, staleTime: 60_000 });
+}
+
+export function useAdvise() {
+  return useMutation({
+    mutationFn: (input: { symbol: string; markPrice: number; closes?: number[] }) =>
+      api.advise(input),
+  });
+}
