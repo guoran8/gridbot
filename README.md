@@ -19,7 +19,11 @@
 | **Decibel 实盘**（Aptos，官方 SDK 签名）            | ✅ 读路径可用；下单走官方 `@decibeltrade/sdk`，默认关，`ALLOW_LIVE=true` 开 |
 | **RISEx 实盘**（RISE Chain / EVM）                  | ✅ 读路径 + 价格/数量换算可用；下单 EIP-712 struct 未公开，默认拒绝         |
 
-**除非你已在 testnet 核对过 Extended 签名，否则只跑 `tradingMode: "paper"`。** Extended 下单默认抛错，需要 `allowUnverifiedSigning` 才放行——见 `packages/exchanges/src/live/extended/sign.ts` 顶部的验证清单。
+**除非你已在 testnet 核对过对应交易所，否则只跑 `tradingMode: "paper"`。** 三家实盘下单都默认拒绝，各有上线清单：
+
+- Extended：[docs/EXTENDED_VERIFICATION.md](docs/EXTENDED_VERIFICATION.md)（手写签名，需对签）
+- Decibel：[docs/DECIBEL_VERIFICATION.md](docs/DECIBEL_VERIFICATION.md)（官方 SDK 签名，最稳）
+- RISEx：[docs/RISEX_VERIFICATION.md](docs/RISEX_VERIFICATION.md)（下单 struct 未公开，暂只读）
 
 ## 技术栈
 
